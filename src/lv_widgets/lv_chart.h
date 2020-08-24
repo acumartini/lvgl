@@ -42,6 +42,7 @@ enum {
     LV_CHART_TYPE_NONE     = 0x00, /**< Don't draw the series*/
     LV_CHART_TYPE_LINE     = 0x01, /**< Connect the points with lines*/
     LV_CHART_TYPE_COLUMN   = 0x02, /**< Draw columns*/
+    LV_CHART_TYPE_SCATTER  = 0x03, /**< X/Y chart, points and/or lines*/
 };
 typedef uint8_t lv_chart_type_t;
 
@@ -52,11 +53,20 @@ enum {
 };
 typedef uint8_t lv_chart_update_mode_t;
 
+
+enum {
+    LV_CHART_AXIS_PRIMARY_Y,
+    LV_CHART_AXIS_SECONDARY_Y,
+    _LV_CHART_AXIS_LAST,
+};
+typedef uint8_t lv_chart_axis_t;
+
 typedef struct {
     lv_coord_t * points;
     lv_color_t color;
     uint16_t start_point;
     uint8_t ext_buf_assigned : 1;
+    lv_chart_axis_t y_axis  : 1;
 } lv_chart_series_t;
 
 /** Data of axis */
@@ -80,8 +90,8 @@ typedef struct {
     /*No inherited ext*/ /*Ext. of ancestor*/
     /*New data for this type */
     lv_ll_t series_ll;    /*Linked list for the data line pointers (stores lv_chart_series_t)*/
-    lv_coord_t ymin;      /*y min value (used to scale the data)*/
-    lv_coord_t ymax;      /*y max value (used to scale the data)*/
+    lv_coord_t ymin[_LV_CHART_AXIS_LAST];      /*y min values for both axis (used to scale the data)*/
+    lv_coord_t ymax[_LV_CHART_AXIS_LAST];      /*y max values for both axis  (used to scale the data)*/
     uint8_t hdiv_cnt;     /*Number of horizontal division lines*/
     uint8_t vdiv_cnt;     /*Number of vertical division lines*/
     uint16_t point_cnt;   /*Point number in a data line*/
@@ -129,13 +139,14 @@ lv_chart_series_t * lv_chart_add_series(lv_obj_t * chart, lv_color_t color);
 /**
  * Clear the point of a series
  * @param chart pointer to a chart object
- * @param serie pointer to the chart's series to clear
+ * @param series pointer to the chart's series to clear
  */
-void lv_chart_clear_serie(lv_obj_t * chart, lv_chart_series_t * serie);
+void lv_chart_clear_series(lv_obj_t * chart, lv_chart_series_t * series);
 
 /*=====================
  * Setter functions
  *====================*/
+
 
 /**
  * Set the number of horizontal and vertical division lines
@@ -146,12 +157,13 @@ void lv_chart_clear_serie(lv_obj_t * chart, lv_chart_series_t * serie);
 void lv_chart_set_div_line_count(lv_obj_t * chart, uint8_t hdiv, uint8_t vdiv);
 
 /**
- * Set the minimal and maximal y values
+ * Set the minimal and maximal y values on an axis
  * @param chart pointer to a graph background object
+ * @param axis `LV_CHART_AXIS_PRIMARY_Y` or `LV_CHART_AXIS_SECONDARY_Y`
  * @param ymin y minimum value
  * @param ymax y maximum value
  */
-void lv_chart_set_range(lv_obj_t * chart, lv_coord_t ymin, lv_coord_t ymax);
+void lv_chart_set_y_range(lv_obj_t * chart, lv_chart_axis_t axis, lv_coord_t ymin, lv_coord_t ymax);
 
 /**
  * Set a new type for a chart
@@ -264,8 +276,8 @@ void lv_chart_set_y_tick_texts(lv_obj_t * chart, const char * list_of_values, ui
 /**
  * Set the index of the x-axis start point in the data array
  * @param chart             pointer to a chart object
- * @param ser 				pointer to a data series on 'chart'
- * @param id    			the index of the x point in the data array
+ * @param ser               pointer to a data series on 'chart'
+ * @param id                the index of the x point in the data array
  */
 void lv_chart_set_x_start_point(lv_obj_t * chart, lv_chart_series_t * ser, uint16_t id);
 
@@ -273,19 +285,27 @@ void lv_chart_set_x_start_point(lv_obj_t * chart, lv_chart_series_t * ser, uint1
  * Set an external array of data points to use for the chart
  * NOTE: It is the users responsibility to make sure the point_cnt matches the external array size.
  * @param chart             pointer to a chart object
- * @param ser 				pointer to a data series on 'chart'
- * @param array				external array of points for chart
+ * @param ser               pointer to a data series on 'chart'
+ * @param array             external array of points for chart
  */
-void lv_chart_set_ext_array(lv_obj_t * chart, lv_chart_series_t * ser, lv_coord_t array[], uint16_t point_cnt );
+void lv_chart_set_ext_array(lv_obj_t * chart, lv_chart_series_t * ser, lv_coord_t array[], uint16_t point_cnt);
 
 /**
  * Set an individual point value in the chart series directly based on index
  * @param chart             pointer to a chart object
- * @param ser 				pointer to a data series on 'chart'
- * @param value				value to assign to array point
- * @param id				the index of the x point in the array
+ * @param ser               pointer to a data series on 'chart'
+ * @param value             value to assign to array point
+ * @param id                the index of the x point in the array
  */
 void lv_chart_set_point_id(lv_obj_t * chart, lv_chart_series_t * ser, lv_coord_t value, uint16_t id);
+
+/**
+ * Set the Y axis of a series
+ * @param chart pointer to a chart object
+ * @param ser pointer to series
+ * @param axis `LV_CHART_AXIS_PRIMARY_Y` or `LV_CHART_AXIS_SECONDARY_Y`
+ */
+void lv_chart_set_series_axis(lv_obj_t * chart, lv_chart_series_t * ser, lv_chart_axis_t axis);
 
 /*=====================
  * Getter functions
@@ -307,19 +327,27 @@ uint16_t lv_chart_get_point_count(const lv_obj_t * chart);
 
 /**
  * get the current index of the x-axis start point in the data array
- * @param ser 				pointer to a data series on 'chart'
- * @return 					the index of the current x start point in the data array
+ * @param ser               pointer to a data series on 'chart'
+ * @return                  the index of the current x start point in the data array
  */
 uint16_t lv_chart_get_x_start_point(lv_chart_series_t * ser);
 
 /**
  * Get an individual point value in the chart series directly based on index
  * @param chart             pointer to a chart object
- * @param ser 				pointer to a data series on 'chart'
- * @param id				the index of the x point in the array
- * @return					value of array point at index id
+ * @param ser               pointer to a data series on 'chart'
+ * @param id                the index of the x point in the array
+ * @return                  value of array point at index id
  */
 lv_coord_t lv_chart_get_point_id(lv_obj_t * chart, lv_chart_series_t * ser, uint16_t id);
+
+/**
+ * Get the Y axis of a series
+ * @param chart pointer to a chart object
+ * @param ser pointer to series
+ * @return `LV_CHART_AXIS_PRIMARY_Y` or `LV_CHART_AXIS_SECONDARY_Y`
+ */
+lv_chart_axis_t lv_chart_get_series_axis(lv_obj_t * chart, lv_chart_series_t * ser);
 
 /*=====================
  * Other functions

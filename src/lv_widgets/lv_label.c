@@ -161,7 +161,7 @@ lv_obj_t * lv_label_create(lv_obj_t * par, const lv_obj_t * copy)
         ext->dot_end       = copy_ext->dot_end;
 
         /*Refresh the style with new signal function*/
-        lv_obj_refresh_style(new_label, LV_STYLE_PROP_ALL);
+        lv_obj_refresh_style(new_label, LV_OBJ_PART_ALL, LV_STYLE_PROP_ALL);
     }
 
     LV_LOG_INFO("label created");
@@ -572,10 +572,21 @@ void lv_label_get_letter_pos(const lv_obj_t * label, uint32_t char_id, lv_point_
     LV_ASSERT_NULL(pos);
 
     const char * txt         = lv_label_get_text(label);
+    lv_label_align_t align = lv_label_get_align(label);
 
     if(txt[0] == '\0') {
-        pos->x = 0;
         pos->y = 0;
+        switch(align) {
+            case LV_LABEL_ALIGN_LEFT:
+                pos->x = 0;
+                break;
+            case LV_LABEL_ALIGN_RIGHT:
+                pos->x = lv_obj_get_width(label);
+                break;
+            case LV_LABEL_ALIGN_CENTER:
+                pos->x = lv_obj_get_width(label) / 2;
+                break;
+        }
         return;
     }
 
@@ -597,7 +608,6 @@ void lv_label_get_letter_pos(const lv_obj_t * label, uint32_t char_id, lv_point_
     if(ext->expand != 0) flag |= LV_TXT_FLAG_EXPAND;
     if(ext->long_mode == LV_LABEL_LONG_EXPAND) flag |= LV_TXT_FLAG_FIT;
 
-    lv_label_align_t align = lv_label_get_align(label);
     if(align == LV_LABEL_ALIGN_CENTER) flag |= LV_TXT_FLAG_CENTER;
     if(align == LV_LABEL_ALIGN_RIGHT) flag |= LV_TXT_FLAG_RIGHT;
 

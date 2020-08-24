@@ -47,6 +47,9 @@ extern "C" {
 #define LV_EXT_CLICK_AREA_TINY  1
 #define LV_EXT_CLICK_AREA_FULL  2
 
+#define _LV_OBJ_PART_VIRTUAL_FIRST 0x01
+#define _LV_OBJ_PART_REAL_FIRST    0x40
+
 /**********************
  *      TYPEDEFS
  **********************/
@@ -102,6 +105,7 @@ enum {
     LV_EVENT_APPLY,  /**< "Ok", "Apply" or similar specific button has clicked*/
     LV_EVENT_CANCEL, /**< "Close", "Cancel" or similar specific button has clicked*/
     LV_EVENT_DELETE, /**< Object is being deleted */
+    _LV_EVENT_LAST /** Number of events*/
 };
 typedef uint8_t lv_event_t; /**< Type of event being sent to the object. */
 
@@ -159,7 +163,7 @@ typedef struct {
     lv_coord_t yofs;
     lv_align_t align;
     uint8_t auto_realign : 1;
-    uint8_t origo_align : 1; /**< 1: the origo (center of the object) was aligned with
+    uint8_t mid_align : 1; /**< 1: the origo (center of the object) was aligned with
                                 `lv_obj_align_origo`*/
 } lv_realign_t;
 #endif
@@ -247,8 +251,8 @@ typedef struct _lv_obj_t {
 
 enum {
     LV_OBJ_PART_MAIN,
-    _LV_OBJ_PART_VIRTUAL_LAST = 0x01,
-    _LV_OBJ_PART_REAL_LAST =    0x40,
+    _LV_OBJ_PART_VIRTUAL_LAST = _LV_OBJ_PART_VIRTUAL_FIRST,
+    _LV_OBJ_PART_REAL_LAST =    _LV_OBJ_PART_REAL_FIRST,
     LV_OBJ_PART_ALL = 0xFF,
 };
 
@@ -349,6 +353,22 @@ void lv_obj_invalidate_area(const lv_obj_t * obj, const lv_area_t * area);
  * @param obj pointer to an object
  */
 void lv_obj_invalidate(const lv_obj_t * obj);
+
+
+/**
+ * Tell whether an area of an object is visible (even partially) now or not
+ * @param obj pointer to an object
+ * @param area the are to check. The visible part of the area will be written back here.
+ * @return true: visible; false: not visible (hidden, out of parent, on other screen, etc)
+ */
+bool lv_obj_area_is_visible(const lv_obj_t * obj, lv_area_t * area);
+
+/**
+ * Tell whether an object is visible (even partially) now or not
+ * @param obj pointer to an object
+ * @return true: visible; false: not visible (hidden, out of parent, on other screen, etc)
+ */
+bool lv_obj_is_visible(const lv_obj_t * obj);
 
 /*=====================
  * Setter functions
@@ -466,6 +486,24 @@ void lv_obj_set_height_margin(lv_obj_t * obj, lv_coord_t h);
 void lv_obj_align(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t x_ofs, lv_coord_t y_ofs);
 
 /**
+ * Align an object to an other object horizontally.
+ * @param obj pointer to an object to align
+ * @param base pointer to an object (if NULL the parent is used). 'obj' will be aligned to it.
+ * @param align type of alignment (see 'lv_align_t' enum)
+ * @param x_ofs x coordinate offset after alignment
+ */
+void lv_obj_align_x(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t x_ofs);
+
+/**
+ * Align an object to an other object vertically.
+ * @param obj pointer to an object to align
+ * @param base pointer to an object (if NULL the parent is used). 'obj' will be aligned to it.
+ * @param align type of alignment (see 'lv_align_t' enum)
+ * @param y_ofs y coordinate offset after alignment
+ */
+void lv_obj_align_y(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t y_ofs);
+
+/**
  * Align an object to an other object.
  * @param obj pointer to an object to align
  * @param base pointer to an object (if NULL the parent is used). 'obj' will be aligned to it.
@@ -473,7 +511,26 @@ void lv_obj_align(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_co
  * @param x_ofs x coordinate offset after alignment
  * @param y_ofs y coordinate offset after alignment
  */
-void lv_obj_align_origo(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t x_ofs, lv_coord_t y_ofs);
+void lv_obj_align_mid(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t x_ofs, lv_coord_t y_ofs);
+
+
+/**
+ * Align an object's middle point to an other object horizontally.
+ * @param obj pointer to an object to align
+ * @param base pointer to an object (if NULL the parent is used). 'obj' will be aligned to it.
+ * @param align type of alignment (see 'lv_align_t' enum)
+ * @param x_ofs x coordinate offset after alignment
+ */
+void lv_obj_align_mid_x(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t x_ofs);
+
+/**
+ * Align an object's middle point to an other object vertically.
+ * @param obj pointer to an object to align
+ * @param base pointer to an object (if NULL the parent is used). 'obj' will be aligned to it.
+ * @param align type of alignment (see 'lv_align_t' enum)
+ * @param y_ofs y coordinate offset after alignment
+ */
+void lv_obj_align_mid_y(lv_obj_t * obj, const lv_obj_t * base, lv_align_t align, lv_coord_t y_ofs);
 
 /**
  * Realign the object based on the last `lv_obj_align` parameters.
@@ -546,7 +603,7 @@ void lv_obj_reset_style_list(lv_obj_t * obj, uint8_t part);
  * @param obj pointer to an object
  * @param prop `LV_STYLE_PROP_ALL` or an `LV_STYLE_...` property. It is used to optimize what needs to be refreshed.
  */
-void lv_obj_refresh_style(lv_obj_t * obj, lv_style_property_t prop);
+void lv_obj_refresh_style(lv_obj_t * obj, uint8_t part, lv_style_property_t prop);
 
 /**
  * Notify all object if a style is modified
@@ -623,6 +680,13 @@ void _lv_obj_set_style_local_ptr(lv_obj_t * obj, uint8_t type, lv_style_property
  * @return true: the property was found and removed; false: the property was not found
  */
 bool lv_obj_remove_style_local_prop(lv_obj_t * obj, uint8_t part, lv_style_property_t prop);
+
+/**
+ * Enable/disable the use of style cahche for an object
+ * @param obj pointer to an object
+ * @param dis true: disable; false: enable (re-enable)
+ */
+void _lv_obj_disable_style_caching(lv_obj_t * obj, bool dis);
 
 /*-----------------
  * Attribute set
@@ -782,6 +846,20 @@ void lv_obj_set_event_cb(lv_obj_t * obj, lv_event_cb_t event_cb);
  * @return LV_RES_OK: `obj` was not deleted in the event; LV_RES_INV: `obj` was deleted in the event
  */
 lv_res_t lv_event_send(lv_obj_t * obj, lv_event_t event, const void * data);
+
+
+/**
+ * Send LV_EVENT_REFRESH event to an object
+ * @param obj point to an obejct. (Can NOT be NULL)
+ * @return LV_RES_OK: success, LV_RES_INV: to object become invalid (e.g. deleted) due to this event.
+ */
+lv_res_t lv_event_send_refresh(lv_obj_t * obj);
+
+/**
+ * Send LV_EVENT_REFRESH event to an object and all of its children
+ * @param obj pointer to an object or NULL to refresh all objects of all displays
+ */
+void lv_event_send_refresh_recursive(lv_obj_t * obj);
 
 /**
  * Call an event function with an object, event, and data.
