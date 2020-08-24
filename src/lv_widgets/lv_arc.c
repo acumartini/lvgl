@@ -388,13 +388,13 @@ void lv_arc_set_value(lv_obj_t * arc, int16_t value)
     LV_ASSERT_OBJ(arc, LV_OBJX_NAME);
 
     lv_arc_ext_t * ext = (lv_arc_ext_t *)lv_obj_get_ext_attr(arc);
-    if(ext->cur_value == value) return;
+    if(!ext->range_change && ext->cur_value == value) return;
 
     int16_t new_value;
     new_value = value > ext->max_value ? ext->max_value : value;
     new_value = new_value < ext->min_value ? ext->min_value : new_value;
 
-    if(ext->cur_value == new_value) return;
+    if(!ext->range_change && ext->cur_value == new_value) return;
     ext->cur_value = new_value;
 
     int16_t bg_midpoint, range_midpoint, bg_end = ext->bg_angle_end;
@@ -424,6 +424,8 @@ void lv_arc_set_value(lv_obj_t * arc, int16_t value)
             angle = _lv_map(ext->cur_value, ext->min_value, ext->max_value, ext->bg_angle_start, bg_end);
             lv_arc_set_end_angle(arc, angle);
     }
+
+    ext->range_change = false; /*Indicate the value has been updated in the event of a range change*/
     ext->last_angle = angle; /*Cache angle for slew rate limiting*/
 }
 
@@ -450,7 +452,8 @@ void lv_arc_set_range(lv_obj_t * arc, int16_t min, int16_t max)
         ext->cur_value = max;
     }
 
-    lv_arc_set_value(arc, ext->cur_value);
+    ext->range_change = true;
+    lv_arc_set_value(arc, ext->cur_value, true);
 }
 
 /**
