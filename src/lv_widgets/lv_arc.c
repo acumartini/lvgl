@@ -24,7 +24,7 @@
 /**********************
  *      TYPEDEFS
  **********************/
-void value_update(lv_obj_t * arc)
+void value_update(lv_obj_t * arc);
 
 /**********************
  *  STATIC PROTOTYPES
@@ -463,7 +463,7 @@ void lv_arc_set_range(lv_obj_t * arc, int16_t min, int16_t max)
         ext->cur_value = max;
     }
 
-    update_value(arc) /* value has changed relative to the new range */
+    value_update(arc); /* value has changed relative to the new range */
 }
 
 /**
